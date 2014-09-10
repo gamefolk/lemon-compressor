@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -10,10 +9,10 @@ import java.util.Scanner;
 
 public class LemonCompressor
 {
-    private static Scanner in = null;
-    private static PrintWriter out = null;
-
     public static void main(String[] args) {
+        Scanner in = null;
+        PrintWriter out = null;
+
         try {
             in = new Scanner(new File(args[0]));
             out = new PrintWriter(new File(args[1]));
@@ -72,7 +71,6 @@ public class LemonCompressor
                     result.append("\n");
                     lastNotes.clear();
 
-                    //lastRest = "0xF" + Integer.toHexString(voice) + hex;
                     lastRest = "0xFF" + hex;
                     lastNotes.add(word);
 
@@ -81,17 +79,20 @@ public class LemonCompressor
                 }
             }
             voice++;
-
             if (voice == 4) {
                 voice = 0;
             }
         }
+        in.close();
+
         String hex = Integer.toHexString(pauseCount);
+
         if (pauseCount < 16) {
             hex = "0" + hex;
         }
         result.append(lastRest + ",");
         dataLength++;
+
         for (String w : lastNotes) {
             result.append(w + ",");
             dataLength++;
@@ -103,46 +104,5 @@ public class LemonCompressor
 
         out.println(result.toString());
         out.close();
-    }
-
-    private static void readDataBlock() throws IOException {
-        in.nextLine();
-        in.nextLine();
-
-        in.useDelimiter(",");
-
-        String word;
-        boolean paused = false;
-        int pauseCount = 0;
-
-        StringBuilder result = new StringBuilder();
-
-        while(in.hasNext()) {
-            word = in.next();
-            if (!paused) {
-                if (word.equals("0x9000")) {
-                    paused = true;
-                }
-                else {
-                    result.append(word + ",");
-                }
-            }
-            else {
-                if (word.equals("0x9000")) {
-                    pauseCount++;
-                }
-                else {
-                    result.append("0xFF" + Integer.toHexString(pauseCount) + ",");
-
-                    pauseCount = 0;
-                    paused = false;
-                }
-            }
-        }
-
-        in.nextLine();
-        in.nextLine();
-        in.nextLine();
-        in.nextLine();
     }
 }

@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.regex.Pattern;
 
 /**
  * Created by Sam on 6/14/14.
@@ -9,8 +10,9 @@ import java.util.Scanner;
 
 public class LemonCompressor
 {
+    private static Scanner in = null;
+
     public static void main(String[] args) {
-        Scanner in = null;
         PrintWriter out = null;
 
         try {
@@ -22,21 +24,63 @@ public class LemonCompressor
         }
         in.useDelimiter(",");
 
-        ArrayList<String> lastNotes = new ArrayList<String>();
-        String lastRest = "0xFF00";
+        StringBuilder songsDef = new StringBuilder();
 
-        String word;
+        while(in.findInLine("char songname") == null) {
+            in.nextLine();
+        }
+        in.nextLine();
+
+        while(in.findInLine("#include") == null) {
+            songsDef.append(in.nextLine() + "\n");
+        }
+        in.nextLine();
+        in.nextLine();
+
+        out.println("int patern ;");
+        out.print(songsDef.toString());
+
+        int patternNum = 0;
+
+        do {
+            in.nextLine();
+            in.nextLine();
+
+            out.println("const UWORD data_song_" + patternNum++ + "[]=");
+            out.println("{");
+            out.println(parsePattern());
+            out.println("};\n");
+
+            in.nextLine();
+            in.nextLine();
+            in.nextLine();
+            in.nextLine();
+        } while(in.hasNextLine() && in.nextLine() != null);
+
+        in.close();
+        out.close();
+    }
+
+    private static String parsePattern() {
+        ArrayList<String> lastNotes = new ArrayList<String>();
+        StringBuilder result = new StringBuilder();
+
+        String lastRest = "0xFF00";
+        String word = null;
+        String endTest = null;
+
         boolean paused = false;
         boolean noteFirst = false;
         boolean pauseFirst = false;
+
         int pauseCount = 0;
         int voice = 0;
         int dataLength = 0;
 
-        StringBuilder result = new StringBuilder();
+        while(endTest == null) {
+            endTest = in.findWithinHorizon(Pattern.compile("0x.*(?=\\r\\n\\r\\n};)"), 8);
 
-        while(in.hasNext()) {
-            word = in.next();
+            word = (endTest == null) ? in.next() : endTest;
             word = word.replaceAll("\r\n","");
 
             if (!paused) {
@@ -83,8 +127,6 @@ public class LemonCompressor
                 voice = 0;
             }
         }
-        in.close();
-
         String hex = Integer.toHexString(pauseCount);
 
         if (pauseCount < 16) {
@@ -102,7 +144,6 @@ public class LemonCompressor
         dataLength++;
         result.insert(0, "0x00" + Integer.toHexString(dataLength) + ",\n");
 
-        out.println(result.toString());
-        out.close();
+        return result.toString();
     }
 }
